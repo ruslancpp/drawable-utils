@@ -94,6 +94,7 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
     }
 
     static class Builder {
+        
         @DrawableRes
         private int mDrawableRes;
         private RectF mRegion;

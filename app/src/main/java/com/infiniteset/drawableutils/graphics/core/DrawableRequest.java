@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.annotation.DrawableRes;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -40,6 +41,7 @@ public class DrawableRequest {
         return mRegion;
     }
 
+    @NonNull
     public Rect getBounds() {
         return mBounds;
     }
