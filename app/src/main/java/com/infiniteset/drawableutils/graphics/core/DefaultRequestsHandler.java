@@ -2,6 +2,7 @@ package com.infiniteset.drawableutils.graphics.core;
 
 import android.graphics.Bitmap;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -9,7 +10,11 @@ import android.os.HandlerThread;
 import android.os.Message;
 import android.support.annotation.IntDef;
 
+import com.infiniteset.drawableutils.graphics.manager.CropManager;
+import com.infiniteset.drawableutils.graphics.manager.DefaultCropManager;
+import com.infiniteset.drawableutils.graphics.manager.DefaultDrawableScaleManager;
 import com.infiniteset.drawableutils.graphics.manager.DrawableLoader;
+import com.infiniteset.drawableutils.graphics.manager.DrawableScaleManager;
 import com.infiniteset.drawableutils.graphics.manager.ResourceDrawableLoader;
 
 import java.lang.annotation.Retention;
@@ -17,7 +22,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static com.infiniteset.drawableutils.graphics.DrawableUtils.convertDrawableTpBitmap;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 /**
@@ -30,8 +34,8 @@ public class DefaultRequestsHandler implements RequestsHandler {
     private static final int REQUEST_LOAD = 0;
     private static final int REQUEST_SCALE = 1;
     private static final int REQUEST_CROP = 2;
-    private static final int REQUEST_ON_COMPLETED = 3;
-    private static final int REQUEST_ON_CANCELLED = 4;
+    private static final int REQUEST_ON_CROPPED = 3;
+    private static final int REQUEST_ON_COMPLETED = 4;
 
     private static HandlerThread REQUEST_DISPATCHER = new HandlerThread("DefaultRequestsHandler");
 
@@ -41,9 +45,11 @@ public class DefaultRequestsHandler implements RequestsHandler {
         mLoaders.add(new ResourceDrawableLoader());
     }
 
-    private ArrayList<DrawableLoader> mLoaders = new ArrayList<>();
+    private final ArrayList<DrawableLoader> mLoaders = new ArrayList<>();
+    private DrawableScaleManager mScaleManager = new DefaultDrawableScaleManager();
+    private CropManager mCropManager = new DefaultCropManager();
 
-    private CopyOnWriteArrayList<Action> mActions = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Action> mActions = new CopyOnWriteArrayList<>();
 
     @Override
     public void post(DrawableRequest request, DrawableHandlerCallbacks callback) {
@@ -88,16 +94,6 @@ public class DefaultRequestsHandler implements RequestsHandler {
         return getDrawableLoader(request).load(request);
     }
 
-    private Bitmap scaleDrawable(DrawableRequest request, Drawable drawable) {
-        Drawable.ConstantState state = drawable.getConstantState();
-        if (state != null) {
-            drawable = state.newDrawable().mutate();
-        }
-
-        Rect bounds = request.getBounds();
-        return convertDrawableTpBitmap(drawable, bounds.width(), bounds.height(), null);
-    }
-
     private void onCancelled(final Action action) {
         final DrawableHandlerCallbacks callback = action.mCallbackRef.get();
         if (callback != null) {
@@ -139,6 +135,38 @@ public class DefaultRequestsHandler implements RequestsHandler {
         }
     }
 
+    private class ScaleTask extends AsyncTask<Action, Void, Action> {
+
+        @Override
+        protected Action doInBackground(Action... params) {
+            Action action = params[0];
+            Rect bounds = action.mRequest.getBounds();
+            action.mStateResult = mScaleManager.scale((Drawable) action.mStateResult, bounds.width(), bounds.height());
+            return action;
+        }
+
+        @Override
+        protected void onPostExecute(Action action) {
+            send(REQUEST_CROP, action);
+        }
+    }
+
+    private class CropTask extends AsyncTask<Action, Void, Action> {
+
+        @Override
+        protected Action doInBackground(Action... params) {
+            Action action = params[0];
+            RectF region = action.mRequest.getRegion();
+            action.mStateResult = mCropManager.crop((Bitmap) action.mStateResult, region);
+            return action;
+        }
+
+        @Override
+        protected void onPostExecute(Action action) {
+            send(REQUEST_ON_CROPPED, action);
+        }
+    }
+
     private class RequestHandler extends Handler {
 
         RequestHandler() {
@@ -160,15 +188,16 @@ public class DefaultRequestsHandler implements RequestsHandler {
                     break;
                 }
                 case REQUEST_SCALE: {
+                    new ScaleTask().execute(action);
                     break;
                 }
                 case REQUEST_CROP: {
+                    new CropTask().execute(action);
                     break;
                 }
-                case REQUEST_ON_CANCELLED: {
-                    break;
-                }
+                case REQUEST_ON_CROPPED:
                 case REQUEST_ON_COMPLETED: {
+                    onFinished(action);
                     break;
                 }
                 default: {
@@ -189,8 +218,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
     }
 
     @Retention(SOURCE)
-    @IntDef({REQUEST_LOAD, REQUEST_SCALE, REQUEST_CROP,
-            REQUEST_ON_COMPLETED, REQUEST_ON_CANCELLED})
+    @IntDef({REQUEST_LOAD, REQUEST_SCALE, REQUEST_CROP, REQUEST_ON_CROPPED, REQUEST_ON_COMPLETED})
     @interface RequestState {
     }
 }
