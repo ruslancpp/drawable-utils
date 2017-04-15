@@ -9,4 +9,7 @@ public interface DrawableHandlerCallbacks {
 
     @UiThread
     void onFinished(DrawableRequest request, DrawableResponse response);
+
+    @UiThread
+    void onCancelled(DrawableRequest request);
 }
