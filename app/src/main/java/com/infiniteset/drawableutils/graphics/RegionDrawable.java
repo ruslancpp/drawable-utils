@@ -93,8 +93,13 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
         invalidateSelf();
     }
 
+    @Override
+    public void onCancelled(DrawableRequest request) {
+        //No-op
+    }
+
     static class Builder {
-        
+
         @DrawableRes
         private int mDrawableRes;
         private RectF mRegion;

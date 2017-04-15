@@ -20,4 +20,7 @@ public interface RequestsHandler {
      * @return True if request successfully scheduled to be dropped otherwise false.
      */
     boolean drop(DrawableRequest request);
+
+    public class RequestsHandlerException extends Exception {
+    }
 }
