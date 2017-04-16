@@ -1,8 +1,10 @@
 package com.infiniteset.drawableutils.graphics;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
+import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -20,6 +22,8 @@ import com.infiniteset.drawableutils.graphics.core.RequestsHandler;
 
 import java.lang.ref.WeakReference;
 
+import static com.infiniteset.drawableutils.graphics.util.DrawableUtils.getCroppedBounds;
+
 /**
  * Drawable container that draws a particular region of provided drawable.
  */
@@ -34,13 +38,11 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
     private RectF mRegion;
     private WeakReference<Context> mContextRef;
     private DrawableRequest mCurrentRequest;
-    private Drawable mDrawable;
-
-    private int mAlpha = 1;
-    private ColorFilter mColorFilter;
-
-    private RegionDrawable() {
-    }
+    private int mIntrinsicWidth = -1;
+    private int mIntrinsicHeight = -1;
+    private Bitmap mBitmap;
+    private Paint mPaint = new Paint();
+    private Rect mDirtyBounds = new Rect();
 
     @Override
     protected void onBoundsChange(Rect bounds) {
@@ -52,29 +54,26 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
 
         mCurrentRequest = new DrawableRequest(mDrawableRes, mRegion, new Rect(bounds), mContextRef.get());
         mHandler.post(mCurrentRequest, this);
+
+        getCroppedBounds(bounds.width(), bounds.height(), mRegion, mDirtyBounds);
+        mDirtyBounds.offset(bounds.left, bounds.top);
     }
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        if (mDrawable != null) {
-            mDrawable.draw(canvas);
+        if (mBitmap != null) {
+            canvas.drawBitmap(mBitmap, null, getDirtyBounds(), mPaint);
         }
     }
 
     @Override
     public void setAlpha(@IntRange(from = 0, to = 255) int alpha) {
-        mAlpha = alpha;
-        if (mDrawable != null) {
-            mDrawable.setAlpha(mAlpha);
-        }
+        mPaint.setAlpha(alpha);
     }
 
     @Override
     public void setColorFilter(@Nullable ColorFilter colorFilter) {
-        mColorFilter = colorFilter;
-        if (mDrawable != null) {
-            mDrawable.setColorFilter(mColorFilter);
-        }
+        mPaint.setColorFilter(colorFilter);
     }
 
     @Override
@@ -83,13 +82,38 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
     }
 
     @Override
-    public void onFinished(DrawableRequest request, DrawableResponse response) {
-        mDrawable = null;
-        if (request == mCurrentRequest) return;
+    public int getIntrinsicWidth() {
+        return mIntrinsicWidth;
+    }
 
-        mDrawable = response.getDrawable();
-        setColorFilter(mColorFilter);
-        setAlpha(mAlpha);
+    @Override
+    public int getIntrinsicHeight() {
+        return mIntrinsicHeight;
+    }
+
+    @NonNull
+    @Override
+    public Rect getDirtyBounds() {
+        return mDirtyBounds;
+    }
+
+    @Override
+    public void onIntrinsicDimensionsDefined(int width, int height) {
+        if (mIntrinsicHeight == height && mIntrinsicWidth == width) return;
+
+        mIntrinsicWidth = width;
+        mIntrinsicHeight = height;
+
+        invalidateSelf();
+    }
+
+    @Override
+    public void onFinished(DrawableRequest request, DrawableResponse response) {
+        mBitmap = null;
+
+        if (request != mCurrentRequest) return;
+
+        mBitmap = response.getBitmap();
         invalidateSelf();
     }
 
@@ -98,7 +122,7 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
         //No-op
     }
 
-    static class Builder {
+    public static class Builder {
 
         @DrawableRes
         private int mDrawableRes;

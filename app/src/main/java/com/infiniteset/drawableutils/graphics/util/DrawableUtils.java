@@ -2,6 +2,7 @@ package com.infiniteset.drawableutils.graphics.util;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 
@@ -38,15 +39,25 @@ final public class DrawableUtils {
      * @return Cropped bitmap.
      */
     public static Bitmap cropBitmap(Bitmap sourceBitmap, RectF boundsRatio) {
-        float startLeftPixel = sourceBitmap.getWidth() * boundsRatio.left;
-        float endRightPixel = sourceBitmap.getWidth() * boundsRatio.right;
-        float startTopPixel = sourceBitmap.getHeight() * boundsRatio.top;
-        float endBottomPixel = sourceBitmap.getHeight() * boundsRatio.bottom;
+        Rect bounds = getCroppedBounds(sourceBitmap.getWidth(), sourceBitmap.getHeight(), boundsRatio, new Rect());
+        return Bitmap.createBitmap(sourceBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
+    }
 
-        return Bitmap.createBitmap(sourceBitmap,
-                (int) Math.floor(startLeftPixel),
-                (int) Math.floor(startTopPixel),
-                Math.round(endRightPixel - startLeftPixel),
-                Math.round(endBottomPixel - startTopPixel));
+    /**
+     * Returns cropped bounds of an area.
+     *
+     * @param width  Width of area.
+     * @param height Height of area.
+     * @param region Region of an area to crop.
+     * @param cache  Cache of cropped bounds.
+     * @return Cropped bounds.
+     */
+    public static Rect getCroppedBounds(int width, int height, RectF region, Rect cache) {
+        int left = (int) Math.floor(width * region.left);
+        int right = (int) Math.ceil(width * region.right);
+        int top = (int) Math.floor(height * region.top);
+        int bottom = (int) Math.ceil(height * region.bottom);
+        cache.set(left, top, right, bottom);
+        return cache;
     }
 }

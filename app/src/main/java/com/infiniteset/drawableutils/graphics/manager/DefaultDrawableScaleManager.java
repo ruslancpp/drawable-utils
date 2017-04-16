@@ -15,8 +15,9 @@ public class DefaultDrawableScaleManager implements DrawableScaleManager {
         Drawable.ConstantState state = drawable.getConstantState();
         if (state != null) {
             drawable = state.newDrawable().mutate();
+            drawable.setBounds(0, 0, width, height);
         }
 
-        return convertDrawableTpBitmap(drawable, width, height, null);
+        return convertDrawableTpBitmap(drawable, width, height, Bitmap.Config.ARGB_8888);
     }
 }

@@ -22,6 +22,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static android.os.Looper.getMainLooper;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 /**
@@ -43,6 +44,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
 
     public DefaultRequestsHandler() {
         mLoaders.add(new ResourceDrawableLoader());
+        dispatcher.start();
     }
 
     private final ArrayList<DrawableLoader> mLoaders = new ArrayList<>();
@@ -56,6 +58,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
         Action action = new Action();
         action.mCanceled = false;
         action.mRequest = request;
+        action.mCallbackRef = new WeakReference<>(callback);
         mActions.add(action);
         send(REQUEST_LOAD, action);
     }
@@ -97,7 +100,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
     private void onCancelled(final Action action) {
         final DrawableHandlerCallbacks callback = action.mCallbackRef.get();
         if (callback != null) {
-            new Handler().post(new Runnable() {
+            new Handler(getMainLooper()).post(new Runnable() {
                 @Override
                 public void run() {
                     callback.onCancelled(action.mRequest);
@@ -110,11 +113,23 @@ public class DefaultRequestsHandler implements RequestsHandler {
         mActions.remove(action);
         final DrawableHandlerCallbacks callback = action.mCallbackRef.get();
         if (callback != null) {
-            new Handler().post(new Runnable() {
+            new Handler(getMainLooper()).post(new Runnable() {
                 @Override
                 public void run() {
-                    DrawableResponse response = new DrawableResponse((Drawable) action.mStateResult);
+                    DrawableResponse response = new DrawableResponse((Bitmap) action.mStateResult);
                     callback.onFinished(action.mRequest, response);
+                }
+            });
+        }
+    }
+
+    private void onIntrinsicDimensionsLoaded(Action action, final int width, final int height) {
+        final DrawableHandlerCallbacks callback = action.mCallbackRef.get();
+        if (callback != null) {
+            new Handler(getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    callback.onIntrinsicDimensionsDefined(width, height);
                 }
             });
         }
@@ -125,7 +140,9 @@ public class DefaultRequestsHandler implements RequestsHandler {
         @Override
         protected Action doInBackground(Action... params) {
             Action action = params[0];
+            Drawable drawable = loadDrawable(action.mRequest);
             action.mStateResult = loadDrawable(action.mRequest);
+            onIntrinsicDimensionsLoaded(action, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
             return action;
         }
 
