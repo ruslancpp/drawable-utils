@@ -19,6 +19,8 @@ import com.infiniteset.drawableutils.graphics.core.DrawableHandlerCallbacks;
 import com.infiniteset.drawableutils.graphics.core.DrawableRequest;
 import com.infiniteset.drawableutils.graphics.core.DrawableResponse;
 import com.infiniteset.drawableutils.graphics.core.RequestsHandler;
+import com.infiniteset.drawableutils.graphics.manager.CacheManager;
+import com.infiniteset.drawableutils.graphics.manager.DefaultCacheManager;
 
 import java.lang.ref.WeakReference;
 
@@ -129,9 +131,11 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
         private RectF mRegion;
         private Context mContext;
         private RequestsHandler mHandler = REQUESTS_HANDLER;
+        private CacheManager mCacheManager;
 
         public Builder(Context context) {
             mContext = context;
+            mCacheManager = DefaultCacheManager.getInstance(context);
         }
 
         public Builder setDrawableRes(@DrawableRes int drawableRes) {
@@ -149,12 +153,18 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
             return this;
         }
 
+        public Builder setCacheManager(CacheManager cacheManager) {
+            mCacheManager = cacheManager;
+            return this;
+        }
+
         public RegionDrawable build() {
             RegionDrawable drawable = new RegionDrawable();
             drawable.mContextRef = new WeakReference<>(mContext);
             drawable.mDrawableRes = mDrawableRes;
             drawable.mRegion = mRegion;
             drawable.mHandler = mHandler;
+            drawable.mHandler.setCacheManager(mCacheManager);
             return drawable;
         }
     }

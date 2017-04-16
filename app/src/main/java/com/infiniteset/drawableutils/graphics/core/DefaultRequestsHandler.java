@@ -4,22 +4,26 @@ import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.support.annotation.IntDef;
+import android.support.annotation.NonNull;
 
+import com.infiniteset.drawableutils.graphics.manager.CacheManager;
 import com.infiniteset.drawableutils.graphics.manager.CropManager;
 import com.infiniteset.drawableutils.graphics.manager.DefaultCropManager;
 import com.infiniteset.drawableutils.graphics.manager.DefaultDrawableScaleManager;
 import com.infiniteset.drawableutils.graphics.manager.DrawableLoader;
 import com.infiniteset.drawableutils.graphics.manager.DrawableScaleManager;
 import com.infiniteset.drawableutils.graphics.manager.ResourceDrawableLoader;
+import com.infiniteset.drawableutils.graphics.manager.TasksExecutor;
+import com.infiniteset.drawableutils.graphics.util.FormatUtils;
 
 import java.lang.annotation.Retention;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static android.os.Looper.getMainLooper;
@@ -30,6 +34,8 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
  */
 public class DefaultRequestsHandler implements RequestsHandler {
 
+    private static final String CACHE_KEY_FORMAT = "res_s:%s_b:%s_r:%s";
+
     private static final int REQUEST = 0;
 
     private static final int REQUEST_LOAD = 0;
@@ -39,32 +45,49 @@ public class DefaultRequestsHandler implements RequestsHandler {
     private static final int REQUEST_ON_COMPLETED = 4;
 
     private static HandlerThread REQUEST_DISPATCHER = new HandlerThread("DefaultRequestsHandler");
+    private static TasksExecutor executor = new TasksExecutor();
 
     private HandlerThread dispatcher = REQUEST_DISPATCHER;
+
+    private final ArrayList<DrawableLoader> mLoaders = new ArrayList<>();
+    private DrawableScaleManager mScaleManager = new DefaultDrawableScaleManager();
+    private CropManager mCropManager = new DefaultCropManager();
+    private CacheManager mCacheManager;
+
+    private final CopyOnWriteArrayList<Action> mActions = new CopyOnWriteArrayList<>();
 
     public DefaultRequestsHandler() {
         mLoaders.add(new ResourceDrawableLoader());
         dispatcher.start();
     }
 
-    private final ArrayList<DrawableLoader> mLoaders = new ArrayList<>();
-    private DrawableScaleManager mScaleManager = new DefaultDrawableScaleManager();
-    private CropManager mCropManager = new DefaultCropManager();
-
-    private final CopyOnWriteArrayList<Action> mActions = new CopyOnWriteArrayList<>();
+    @Override
+    public void setCacheManager(CacheManager cacheManager) {
+        mCacheManager = cacheManager;
+    }
 
     @Override
-    public void post(DrawableRequest request, DrawableHandlerCallbacks callback) {
+    public void post(@NonNull DrawableRequest request, DrawableHandlerCallbacks callback) {
         Action action = new Action();
+        action.mNextState = REQUEST_LOAD;
         action.mCanceled = false;
         action.mRequest = request;
         action.mCallbackRef = new WeakReference<>(callback);
         mActions.add(action);
-        send(REQUEST_LOAD, action);
+
+        Bitmap cache = mCacheManager.getMemoryCache(getKey(request));
+        if (cache != null) {
+            action.mNextState = REQUEST_ON_COMPLETED;
+            action.mStateResult = cache;
+            onFinished(action);
+            return;
+        }
+
+        send(action);
     }
 
     @Override
-    public boolean drop(DrawableRequest request) {
+    public boolean drop(@NonNull DrawableRequest request) {
         for (Action action : mActions) {
             if (action.mRequest == request) {
                 action.mCanceled = true;
@@ -75,8 +98,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
         return false;
     }
 
-    private void send(@RequestState int nextState, Action action) {
-        action.mNextState = nextState;
+    private void send(Action action) {
         RequestHandler handler = new RequestHandler();
         Message message = handler.obtainMessage(REQUEST, action);
         handler.sendMessage(message);
@@ -123,7 +145,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
         }
     }
 
-    private void onIntrinsicDimensionsLoaded(Action action, final int width, final int height) {
+    private void onIntrinsicDimensionsDefined(Action action, final int width, final int height) {
         final DrawableHandlerCallbacks callback = action.mCallbackRef.get();
         if (callback != null) {
             new Handler(getMainLooper()).post(new Runnable() {
@@ -135,52 +157,113 @@ public class DefaultRequestsHandler implements RequestsHandler {
         }
     }
 
-    private class LoadTask extends AsyncTask<Action, Void, Action> {
+    private String getKey(DrawableRequest request) {
+        int resId = request.getDrawableId();
+        Rect bounds = request.getBounds();
+        RectF region = request.getRegion();
 
-        @Override
-        protected Action doInBackground(Action... params) {
-            Action action = params[0];
-            Drawable drawable = loadDrawable(action.mRequest);
-            action.mStateResult = loadDrawable(action.mRequest);
-            onIntrinsicDimensionsLoaded(action, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-            return action;
+        if (request.getDrawableId() != 0) {
+            return FormatUtils.hashKeyForDisk(String.format(Locale.US, CACHE_KEY_FORMAT, resId, bounds, region));
         }
 
-        @Override
-        protected void onPostExecute(Action action) {
-            send(REQUEST_SCALE, action);
+        throw new IllegalArgumentException("Key generation is not supported for this type of DrawableRequest");
+    }
+
+    private abstract class Task implements Runnable {
+
+        protected Action mAction;
+
+        Task(Action action) {
+            mAction = action;
         }
     }
 
-    private class ScaleTask extends AsyncTask<Action, Void, Action> {
+    private class LoadTask extends Task {
 
-        @Override
-        protected Action doInBackground(Action... params) {
-            Action action = params[0];
-            Rect bounds = action.mRequest.getBounds();
-            action.mStateResult = mScaleManager.scale((Drawable) action.mStateResult, bounds.width(), bounds.height());
-            return action;
+        LoadTask(Action action) {
+            super(action);
         }
 
         @Override
-        protected void onPostExecute(Action action) {
-            send(REQUEST_CROP, action);
+        public void run() {
+            DrawableRequest request = mAction.mRequest;
+            String key = getKey(request);
+            Bitmap cache = mCacheManager.getMemoryCache(key);
+            if (cache == null) {
+                cache = mCacheManager.getDiskCache(key);
+                if (cache != null) {
+                    mCacheManager.setMemoryCache(key, cache);
+                }
+            }
+
+            int width;
+            int height;
+
+            if (cache != null) {
+                mAction.mStateResult = cache;
+                mAction.mNextState = REQUEST_ON_COMPLETED;
+                RectF region = mAction.mRequest.getRegion();
+                width = (int) (cache.getWidth() / (region.right - region.left));
+                height = (int) (cache.getHeight() / (region.bottom - region.top));
+            } else {
+                Drawable drawable = loadDrawable(request);
+                mAction.mStateResult = drawable;
+                width = drawable.getIntrinsicWidth();
+                height = drawable.getIntrinsicHeight();
+                mAction.mNextState = REQUEST_SCALE;
+            }
+
+            onIntrinsicDimensionsDefined(mAction, width, height);
+            send(mAction);
         }
     }
 
-    private class CropTask extends AsyncTask<Action, Void, Action> {
+    private class ScaleTask extends Task {
 
-        @Override
-        protected Action doInBackground(Action... params) {
-            Action action = params[0];
-            RectF region = action.mRequest.getRegion();
-            action.mStateResult = mCropManager.crop((Bitmap) action.mStateResult, region);
-            return action;
+        ScaleTask(Action action) {
+            super(action);
         }
 
         @Override
-        protected void onPostExecute(Action action) {
-            send(REQUEST_ON_CROPPED, action);
+        public void run() {
+            Rect bounds = mAction.mRequest.getBounds();
+            mAction.mStateResult = mScaleManager.scale((Drawable) mAction.mStateResult, bounds.width(), bounds.height());
+            mAction.mNextState = REQUEST_CROP;
+            send(mAction);
+        }
+    }
+
+    private class SaveCacheTask extends Task {
+
+        SaveCacheTask(Action action) {
+            super(action);
+        }
+
+        @Override
+        public void run() {
+            DrawableRequest request = mAction.mRequest;
+            String key = getKey(request);
+            Bitmap bitmap = (Bitmap) mAction.mStateResult;
+
+            mCacheManager.setMemoryCache(key, bitmap);
+            mCacheManager.setDiskCache(key, bitmap);
+            mAction.mNextState = REQUEST_ON_COMPLETED;
+            send(mAction);
+        }
+    }
+
+    private class CropTask extends Task {
+
+        CropTask(Action action) {
+            super(action);
+        }
+
+        @Override
+        public void run() {
+            RectF region = mAction.mRequest.getRegion();
+            mAction.mStateResult = mCropManager.crop((Bitmap) mAction.mStateResult, region);
+            mAction.mNextState = REQUEST_ON_CROPPED;
+            send(mAction);
         }
     }
 
@@ -199,28 +282,34 @@ public class DefaultRequestsHandler implements RequestsHandler {
                 return;
             }
 
+            Task task;
             switch (action.mNextState) {
                 case REQUEST_LOAD: {
-                    new LoadTask().execute(action);
+                    task = new LoadTask(action);
                     break;
                 }
                 case REQUEST_SCALE: {
-                    new ScaleTask().execute(action);
+                    task = new ScaleTask(action);
                     break;
                 }
                 case REQUEST_CROP: {
-                    new CropTask().execute(action);
+                    task = new CropTask(action);
                     break;
                 }
-                case REQUEST_ON_CROPPED:
+                case REQUEST_ON_CROPPED: {
+                    task = new SaveCacheTask(action);
+                    break;
+                }
                 case REQUEST_ON_COMPLETED: {
                     onFinished(action);
-                    break;
+                    return;
                 }
                 default: {
                     throw new IllegalArgumentException("Bad request");
                 }
             }
+
+            executor.execute(task);
         }
     }
 

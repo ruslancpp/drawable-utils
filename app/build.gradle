@@ -26,6 +26,9 @@ dependencies {
     compile "com.android.support:appcompat-v7:$libSupport"
     compile "com.android.support:support-annotations:$libSupport"
 
+    // Utils
+    compile 'com.jakewharton:disklrucache:2.0.2'
+
     // Testing
     testCompile "junit:junit:$libJunit"
 }
