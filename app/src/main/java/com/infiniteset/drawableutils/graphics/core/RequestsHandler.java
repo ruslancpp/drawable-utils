@@ -1,5 +1,9 @@
 package com.infiniteset.drawableutils.graphics.core;
 
+import android.support.annotation.NonNull;
+
+import com.infiniteset.drawableutils.graphics.manager.CacheManager;
+
 /**
  * Common interface for handling {@link DrawableRequest}.
  */
@@ -11,7 +15,7 @@ public interface RequestsHandler {
      * @param request  Requested drawable with regions.
      * @param callback Callbacks of the request progress.
      */
-    void post(DrawableRequest request, DrawableHandlerCallbacks callback);
+    void post(@NonNull DrawableRequest request, DrawableHandlerCallbacks callback);
 
     /**
      * Drops previously posted request.
@@ -19,8 +23,12 @@ public interface RequestsHandler {
      * @param request Request to be dropped.
      * @return True if request successfully scheduled to be dropped otherwise false.
      */
-    boolean drop(DrawableRequest request);
+    boolean drop(@NonNull DrawableRequest request);
 
-    public class RequestsHandlerException extends Exception {
-    }
+    /**
+     * Sets cache manager.
+     *
+     * @param cacheManager Cache manager.
+     */
+    void setCacheManager(@NonNull CacheManager cacheManager);
 }
