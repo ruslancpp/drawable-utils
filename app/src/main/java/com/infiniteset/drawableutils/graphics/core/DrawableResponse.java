@@ -1,19 +1,19 @@
 package com.infiniteset.drawableutils.graphics.core;
 
-import android.graphics.drawable.Drawable;
+import android.graphics.Bitmap;
 
 /**
  * Result with drawable with requested region to be drawn.
  */
 public class DrawableResponse {
 
-    private Drawable mDrawable;
+    private Bitmap mBitmap;
 
-    public DrawableResponse(Drawable drawable) {
-        mDrawable = drawable;
+    public DrawableResponse(Bitmap bitmap) {
+        mBitmap = bitmap;
     }
 
-    public Drawable getDrawable() {
-        return mDrawable;
+    public Bitmap getBitmap() {
+        return mBitmap;
     }
 }
