@@ -1,5 +1,6 @@
 package com.infiniteset.drawableutils.graphics.core;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -12,7 +13,6 @@ import android.support.annotation.NonNull;
 
 import com.infiniteset.drawableutils.graphics.manager.CacheManager;
 import com.infiniteset.drawableutils.graphics.manager.CropManager;
-import com.infiniteset.drawableutils.graphics.manager.DefaultCropManager;
 import com.infiniteset.drawableutils.graphics.manager.DefaultDrawableScaleManager;
 import com.infiniteset.drawableutils.graphics.manager.DrawableLoader;
 import com.infiniteset.drawableutils.graphics.manager.DrawableScaleManager;
@@ -44,26 +44,31 @@ public class DefaultRequestsHandler implements RequestsHandler {
     private static final int REQUEST_ON_CROPPED = 3;
     private static final int REQUEST_ON_COMPLETED = 4;
 
-    private static HandlerThread REQUEST_DISPATCHER = new HandlerThread("DefaultRequestsHandler");
     private static TasksExecutor executor = new TasksExecutor();
 
-    private HandlerThread dispatcher = REQUEST_DISPATCHER;
+    private HandlerThread dispatcher;
 
     private final ArrayList<DrawableLoader> mLoaders = new ArrayList<>();
     private DrawableScaleManager mScaleManager = new DefaultDrawableScaleManager();
-    private CropManager mCropManager = new DefaultCropManager();
+    private CropManager mCropManager;
     private CacheManager mCacheManager;
 
     private final CopyOnWriteArrayList<Action> mActions = new CopyOnWriteArrayList<>();
 
-    public DefaultRequestsHandler() {
-        mLoaders.add(new ResourceDrawableLoader());
+    public DefaultRequestsHandler(Context context) {
+        mLoaders.add(new ResourceDrawableLoader(context));
+        dispatcher = new HandlerThread("DefaultRequestsHandler");
         dispatcher.start();
     }
 
     @Override
     public void setCacheManager(CacheManager cacheManager) {
         mCacheManager = cacheManager;
+    }
+
+    @Override
+    public void setCropManager(@NonNull CropManager cropManager) {
+        mCropManager = cropManager;
     }
 
     @Override

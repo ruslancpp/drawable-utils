@@ -12,8 +12,8 @@ public interface CropManager {
      * Crops bitmap with provided bounds ratios.
      *
      * @param sourceBitmap Source bitmap.
-     * @param boundsRatio  Bounds ratios.
+     * @param region       Bounds region.
      * @return Cropped bitmap.
      */
-    Bitmap crop(Bitmap sourceBitmap, RectF boundsRatio);
+    Bitmap crop(Bitmap sourceBitmap, RectF region);
 }

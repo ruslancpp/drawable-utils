@@ -34,13 +34,13 @@ final public class DrawableUtils {
     /**
      * Crops bitmap with provided bounds ratios.
      *
-     * @param sourceBitmap Source bitmap.
-     * @param boundsRatio  Bounds ratios.
+     * @param bitmap Source bitmap.
+     * @param region Bounds region.
      * @return Cropped bitmap.
      */
-    public static Bitmap cropBitmap(Bitmap sourceBitmap, RectF boundsRatio) {
-        Rect bounds = getCroppedBounds(sourceBitmap.getWidth(), sourceBitmap.getHeight(), boundsRatio, new Rect());
-        return Bitmap.createBitmap(sourceBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
+    public static Bitmap cropBitmap(Bitmap bitmap, RectF region) {
+        Rect bounds = getCroppedBounds(bitmap.getWidth(), bitmap.getHeight(), region, new Rect());
+        return Bitmap.createBitmap(bitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
     }
 
     /**

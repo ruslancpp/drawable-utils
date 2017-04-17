@@ -20,20 +20,7 @@ import static android.content.Context.MODE_PRIVATE;
  * This implementation based on LRU memory and disk caches.
  * Default disk cache size is 1 MB and memory cache is 1/8 of max available memory.
  */
-public class DefaultCacheManager implements CacheManager {
-
-    private static DefaultCacheManager INSTANCE;
-
-    public static DefaultCacheManager getInstance(Context context) {
-        if (INSTANCE != null) return INSTANCE;
-
-        synchronized (DefaultCacheManager.class) {
-            if (INSTANCE != null) return INSTANCE;
-
-            INSTANCE = new DefaultCacheManager(context);
-            return INSTANCE;
-        }
-    }
+public class DefaultCacheManager extends Manager implements CacheManager {
 
     private final static String TAG = DefaultCacheManager.class.getName();
     private final static long DISK_CACHE_SIZE = 1 << 20;
@@ -43,11 +30,10 @@ public class DefaultCacheManager implements CacheManager {
 
     private LruCache<String, Bitmap> mMemoryCache;
     private DiskLruCache mDiskLruCache;
-    private Context mApplicationContext;
     private boolean mDiskCacheStarting = true;
 
-    private DefaultCacheManager(Context context) {
-        mApplicationContext = context.getApplicationContext();
+    public DefaultCacheManager(Context context) {
+        super(context);
         initMemoryCache();
         initDiskCache();
     }
@@ -155,7 +141,7 @@ public class DefaultCacheManager implements CacheManager {
     private void initDiskCache() {
         synchronized (mDiskCacheLock) {
             if (mDiskLruCache == null || mDiskLruCache.isClosed()) {
-                File diskCacheDir = mApplicationContext.getDir("regions-cache", MODE_PRIVATE);
+                File diskCacheDir = getContext().getDir("regions-cache", MODE_PRIVATE);
                 if (diskCacheDir != null) {
                     if (!diskCacheDir.exists()) {
                         diskCacheDir.mkdirs();
