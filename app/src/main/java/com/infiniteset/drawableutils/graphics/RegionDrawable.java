@@ -19,10 +19,6 @@ import com.infiniteset.drawableutils.graphics.core.DrawableHandlerCallbacks;
 import com.infiniteset.drawableutils.graphics.core.DrawableRequest;
 import com.infiniteset.drawableutils.graphics.core.DrawableResponse;
 import com.infiniteset.drawableutils.graphics.core.RequestsHandler;
-import com.infiniteset.drawableutils.graphics.manager.CacheManager;
-import com.infiniteset.drawableutils.graphics.manager.DefaultCacheManager;
-
-import java.lang.ref.WeakReference;
 
 import static com.infiniteset.drawableutils.graphics.util.DrawableUtils.getCroppedBounds;
 
@@ -31,14 +27,11 @@ import static com.infiniteset.drawableutils.graphics.util.DrawableUtils.getCropp
  */
 final public class RegionDrawable extends Drawable implements DrawableHandlerCallbacks {
 
-    private final static RequestsHandler REQUESTS_HANDLER = new DefaultRequestsHandler();
-
-    private RequestsHandler mHandler = REQUESTS_HANDLER;
+    private RequestsHandler mHandler;
 
     @DrawableRes
     private int mDrawableRes;
     private RectF mRegion;
-    private WeakReference<Context> mContextRef;
     private DrawableRequest mCurrentRequest;
     private int mIntrinsicWidth = -1;
     private int mIntrinsicHeight = -1;
@@ -54,7 +47,7 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
             mHandler.drop(mCurrentRequest);
         }
 
-        mCurrentRequest = new DrawableRequest(mDrawableRes, mRegion, new Rect(bounds), mContextRef.get());
+        mCurrentRequest = new DrawableRequest(mDrawableRes, mRegion, new Rect(bounds));
         mHandler.post(mCurrentRequest, this);
 
         getCroppedBounds(bounds.width(), bounds.height(), mRegion, mDirtyBounds);
@@ -124,47 +117,23 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
         //No-op
     }
 
-    public static class Builder {
+    public static class Factory {
 
-        @DrawableRes
-        private int mDrawableRes;
-        private RectF mRegion;
-        private Context mContext;
-        private RequestsHandler mHandler = REQUESTS_HANDLER;
-        private CacheManager mCacheManager;
+        private RequestsHandler mHandler;
 
-        public Builder(Context context) {
-            mContext = context;
-            mCacheManager = DefaultCacheManager.getInstance(context);
+        public Factory(Context context) {
+            mHandler = new DefaultRequestsHandler(context);
         }
 
-        public Builder setDrawableRes(@DrawableRes int drawableRes) {
-            mDrawableRes = drawableRes;
-            return this;
-        }
-
-        public Builder setRegion(RectF region) {
-            mRegion = region;
-            return this;
-        }
-
-        public Builder setRequestHandler(RequestsHandler handler) {
+        public void setHandler(RequestsHandler handler) {
             mHandler = handler;
-            return this;
         }
 
-        public Builder setCacheManager(CacheManager cacheManager) {
-            mCacheManager = cacheManager;
-            return this;
-        }
-
-        public RegionDrawable build() {
+        public RegionDrawable getInstance(@DrawableRes int resId, RectF region) {
             RegionDrawable drawable = new RegionDrawable();
-            drawable.mContextRef = new WeakReference<>(mContext);
-            drawable.mDrawableRes = mDrawableRes;
-            drawable.mRegion = mRegion;
+            drawable.mDrawableRes = resId;
+            drawable.mRegion = region;
             drawable.mHandler = mHandler;
-            drawable.mHandler.setCacheManager(mCacheManager);
             return drawable;
         }
     }

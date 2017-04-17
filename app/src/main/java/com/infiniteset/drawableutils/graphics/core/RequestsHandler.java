@@ -3,6 +3,7 @@ package com.infiniteset.drawableutils.graphics.core;
 import android.support.annotation.NonNull;
 
 import com.infiniteset.drawableutils.graphics.manager.CacheManager;
+import com.infiniteset.drawableutils.graphics.manager.CropManager;
 
 /**
  * Common interface for handling {@link DrawableRequest}.
@@ -31,4 +32,11 @@ public interface RequestsHandler {
      * @param cacheManager Cache manager.
      */
     void setCacheManager(@NonNull CacheManager cacheManager);
+
+    /**
+     * Sets crop manager.
+     *
+     * @param cropManager Crop manager.
+     */
+    void setCropManager(@NonNull CropManager cropManager);
 }
