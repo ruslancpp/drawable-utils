@@ -1,10 +1,11 @@
-package com.infiniteset.drawableutils.graphics.manager;
+package com.infiniteset.drawableutils.graphics.manager.loader;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.support.v7.content.res.AppCompatResources;
 
 import com.infiniteset.drawableutils.graphics.core.DrawableRequest;
+import com.infiniteset.drawableutils.graphics.manager.Manager;
 
 /**
  * Implementation of {@link DrawableLoader} that can load {@link Drawable} from resources.

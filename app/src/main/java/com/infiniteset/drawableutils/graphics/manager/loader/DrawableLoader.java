@@ -1,4 +1,4 @@
-package com.infiniteset.drawableutils.graphics.manager;
+package com.infiniteset.drawableutils.graphics.manager.loader;
 
 import android.graphics.drawable.Drawable;
 
