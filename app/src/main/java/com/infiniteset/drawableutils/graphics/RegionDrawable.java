@@ -33,15 +33,18 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
     private int mDrawableRes;
     private RectF mRegion;
     private DrawableRequest mCurrentRequest;
-    private int mIntrinsicWidth = -1;
-    private int mIntrinsicHeight = -1;
     private Bitmap mBitmap;
     private Paint mPaint = new Paint();
     private Rect mDirtyBounds = new Rect();
+    private Rect mPrevBounds = new Rect();
 
     @Override
     protected void onBoundsChange(Rect bounds) {
         super.onBoundsChange(bounds);
+
+        if (mPrevBounds == bounds) return;
+
+        mPrevBounds.set(bounds);
 
         if (mCurrentRequest != null) {
             mHandler.drop(mCurrentRequest);
@@ -50,8 +53,7 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
         mCurrentRequest = new DrawableRequest(mDrawableRes, mRegion, new Rect(bounds));
         mHandler.post(mCurrentRequest, this);
 
-        getCroppedBounds(bounds.width(), bounds.height(), mRegion, mDirtyBounds);
-        mDirtyBounds.offset(bounds.left, bounds.top);
+        updateDirtyBounds();
     }
 
     @Override
@@ -78,12 +80,12 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
 
     @Override
     public int getIntrinsicWidth() {
-        return mIntrinsicWidth;
+        return getBounds().width();
     }
 
     @Override
     public int getIntrinsicHeight() {
-        return mIntrinsicHeight;
+        return getBounds().height();
     }
 
     @NonNull
@@ -93,28 +95,22 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
     }
 
     @Override
-    public void onIntrinsicDimensionsDefined(int width, int height) {
-        if (mIntrinsicHeight == height && mIntrinsicWidth == width) return;
-
-        mIntrinsicWidth = width;
-        mIntrinsicHeight = height;
-
-        invalidateSelf();
-    }
-
-    @Override
     public void onFinished(DrawableRequest request, DrawableResponse response) {
         mBitmap = null;
 
         if (request != mCurrentRequest) return;
 
+        mRegion = response.getRegion();
         mBitmap = response.getBitmap();
+
+        updateDirtyBounds();
+
         invalidateSelf();
     }
 
-    @Override
-    public void onCancelled(DrawableRequest request) {
-        //No-op
+    private void updateDirtyBounds() {
+        getCroppedBounds(getBounds().width(), getBounds().height(), mRegion, mDirtyBounds);
+        mDirtyBounds.offset(getBounds().left, getBounds().top);
     }
 
     public static class Factory {
