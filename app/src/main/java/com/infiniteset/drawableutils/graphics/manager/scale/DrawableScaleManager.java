@@ -1,4 +1,4 @@
-package com.infiniteset.drawableutils.graphics.manager;
+package com.infiniteset.drawableutils.graphics.manager.scale;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;

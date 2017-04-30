@@ -1,4 +1,4 @@
-package com.infiniteset.drawableutils.graphics.manager;
+package com.infiniteset.drawableutils.graphics.manager.cache;
 
 /**
  * Common interface for cache manager.

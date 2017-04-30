@@ -1,8 +1,10 @@
-package com.infiniteset.drawableutils.graphics.manager;
+package com.infiniteset.drawableutils.graphics.manager.crop;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
+
+import com.infiniteset.drawableutils.graphics.manager.Manager;
 
 import static com.infiniteset.drawableutils.graphics.util.DrawableUtils.cropBitmap;
 

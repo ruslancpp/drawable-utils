@@ -10,13 +10,13 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.infiniteset.drawableutils.graphics.manager.CacheManager;
-import com.infiniteset.drawableutils.graphics.manager.CropManager;
-import com.infiniteset.drawableutils.graphics.manager.DefaultDrawableScaleManager;
-import com.infiniteset.drawableutils.graphics.manager.DrawableLoader;
-import com.infiniteset.drawableutils.graphics.manager.DrawableScaleManager;
-import com.infiniteset.drawableutils.graphics.manager.ResourceDrawableLoader;
 import com.infiniteset.drawableutils.graphics.manager.TasksExecutor;
+import com.infiniteset.drawableutils.graphics.manager.cache.CacheManager;
+import com.infiniteset.drawableutils.graphics.manager.crop.CropManager;
+import com.infiniteset.drawableutils.graphics.manager.loader.DrawableLoader;
+import com.infiniteset.drawableutils.graphics.manager.loader.ResourceDrawableLoader;
+import com.infiniteset.drawableutils.graphics.manager.scale.DefaultDrawableScaleManager;
+import com.infiniteset.drawableutils.graphics.manager.scale.DrawableScaleManager;
 import com.infiniteset.drawableutils.graphics.util.FormatUtils;
 
 import java.lang.ref.WeakReference;

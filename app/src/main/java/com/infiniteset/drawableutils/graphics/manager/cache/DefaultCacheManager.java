@@ -1,4 +1,4 @@
-package com.infiniteset.drawableutils.graphics.manager;
+package com.infiniteset.drawableutils.graphics.manager.cache;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.support.v4.util.LruCache;
 import android.util.Log;
 
+import com.infiniteset.drawableutils.graphics.manager.Manager;
 import com.jakewharton.disklrucache.DiskLruCache;
 
 import java.io.File;
@@ -59,6 +60,7 @@ public class DefaultCacheManager extends Manager implements CacheManager {
                 try {
                     mDiskCacheLock.wait();
                 } catch (InterruptedException e) {
+                    Log.e(TAG, "Thread was interrupted.", e);
                 }
             }
             if (mDiskLruCache != null) {

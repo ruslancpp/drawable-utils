@@ -2,8 +2,8 @@ package com.infiniteset.drawableutils.graphics.core;
 
 import android.support.annotation.NonNull;
 
-import com.infiniteset.drawableutils.graphics.manager.CacheManager;
-import com.infiniteset.drawableutils.graphics.manager.CropManager;
+import com.infiniteset.drawableutils.graphics.manager.cache.CacheManager;
+import com.infiniteset.drawableutils.graphics.manager.crop.CropManager;
 
 /**
  * Common interface for handling {@link DrawableRequest}.
