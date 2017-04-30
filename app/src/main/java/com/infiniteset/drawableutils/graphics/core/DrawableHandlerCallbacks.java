@@ -8,11 +8,5 @@ import android.support.annotation.UiThread;
 public interface DrawableHandlerCallbacks {
 
     @UiThread
-    void onIntrinsicDimensionsDefined(int width, int height);
-
-    @UiThread
     void onFinished(DrawableRequest request, DrawableResponse response);
-
-    @UiThread
-    void onCancelled(DrawableRequest request);
 }
