@@ -42,7 +42,7 @@ public class DefaultRequestsHandler implements RequestsHandler {
     private DrawableScaleManager mScaleManager = new DefaultDrawableScaleManager();
     private CropManager mCropManager;
     private CacheManager mCacheManager;
-    private LruCache<String, RectF> mRegionsCache = new LruCache<String, RectF>(100) {
+    private final LruCache<String, RectF> mRegionsCache = new LruCache<String, RectF>(100) {
         @Override
         protected int sizeOf(String key, RectF rect) {
             return 1;

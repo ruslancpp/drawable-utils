@@ -25,10 +25,14 @@ public interface CropManager {
      */
     RectF resolveRegion(Bitmap bitmap);
 
+    /**
+     * Container for result of crop operation that contains a cropped bitmap and applied region to the
+     * source bitmap.
+     */
     class CropResult {
 
-        private Bitmap mBitmap;
-        private RectF mRegion;
+        private final Bitmap mBitmap;
+        private final RectF mRegion;
 
         public CropResult(Bitmap bitmap, RectF region) {
             mBitmap = bitmap;
