@@ -13,7 +13,34 @@ public interface CropManager {
      *
      * @param sourceBitmap Source bitmap.
      * @param region       Bounds region.
-     * @return Cropped bitmap.
+     * @return {@link CropResult}.
      */
-    Bitmap crop(Bitmap sourceBitmap, RectF region);
+    CropResult crop(Bitmap sourceBitmap, RectF region);
+
+    /**
+     * Resolves region of bitmap.
+     *
+     * @param bitmap Source bitmap.
+     * @return Region
+     */
+    RectF resolveRegion(Bitmap bitmap);
+
+    class CropResult {
+
+        private Bitmap mBitmap;
+        private RectF mRegion;
+
+        public CropResult(Bitmap bitmap, RectF region) {
+            mBitmap = bitmap;
+            mRegion = region;
+        }
+
+        public Bitmap getBitmap() {
+            return mBitmap;
+        }
+
+        public RectF getRegion() {
+            return mRegion;
+        }
+    }
 }

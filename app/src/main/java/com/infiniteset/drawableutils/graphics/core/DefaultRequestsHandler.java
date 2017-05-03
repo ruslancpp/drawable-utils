@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
+import android.support.v4.util.LruCache;
 import android.util.Log;
 
 import com.infiniteset.drawableutils.graphics.manager.TasksExecutor;
@@ -41,6 +42,12 @@ public class DefaultRequestsHandler implements RequestsHandler {
     private DrawableScaleManager mScaleManager = new DefaultDrawableScaleManager();
     private CropManager mCropManager;
     private CacheManager mCacheManager;
+    private LruCache<String, RectF> mRegionsCache = new LruCache<String, RectF>(100) {
+        @Override
+        protected int sizeOf(String key, RectF rect) {
+            return 1;
+        }
+    };
 
     private final CopyOnWriteArrayList<Action> mActions = new CopyOnWriteArrayList<>();
 
@@ -67,11 +74,13 @@ public class DefaultRequestsHandler implements RequestsHandler {
         action.mCallbackRef = new WeakReference<>(callback);
         mActions.add(action);
 
-        Bitmap cache = mCacheManager.getMemoryCache(getKey(request));
-        if (cache != null) {
+        String key = getKey(request);
+        Bitmap cache = mCacheManager.getMemoryCache(key);
+        RectF region = getRegion(request);
+        if (cache != null && region != null) {
             DrawableResponse response = new DrawableResponse(
                     cache,
-                    request.getRegion(),
+                    region,
                     SystemClock.uptimeMillis() - action.mStartTime);
             onFinished(action, response);
             return;
@@ -134,6 +143,10 @@ public class DefaultRequestsHandler implements RequestsHandler {
         throw new IllegalArgumentException("Key generation is not supported for this type of DrawableRequest");
     }
 
+    private RectF getRegion(DrawableRequest request) {
+        return (request.getRegion() != null) ? request.getRegion() : mRegionsCache.get(getKey(request));
+    }
+
     private class Task implements Runnable {
 
         private Action mAction;
@@ -155,17 +168,18 @@ public class DefaultRequestsHandler implements RequestsHandler {
                 }
             }
 
-            if (cache != null) {
+            RectF region = getRegion(request);
+            if (cache != null && region != null) {
                 DrawableResponse response = new DrawableResponse(
                         cache,
-                        request.getRegion(),
+                        region,
                         SystemClock.uptimeMillis() - mAction.mStartTime);
                 onFinished(mAction, response);
                 return;
             }
             //endregion
 
-            RectF region = mAction.mRequest.getRegion();
+            region = mAction.mRequest.getRegion();
             Rect bounds = mAction.mRequest.getBounds();
 
             if (mAction.mCanceled) return;
@@ -175,17 +189,18 @@ public class DefaultRequestsHandler implements RequestsHandler {
             Bitmap scaledBitmap = mScaleManager.scale(drawable, bounds.width(), bounds.height());
 
             if (mAction.mCanceled) return;
-            Bitmap croppedBitmap = mCropManager.crop(scaledBitmap, region);
 
-            mCacheManager.setMemoryCache(key, croppedBitmap);
+            CropManager.CropResult cropResult = mCropManager.crop(scaledBitmap, region);
+            mCacheManager.setMemoryCache(key, cropResult.getBitmap());
+            mRegionsCache.put(key, cropResult.getRegion());
 
             if (mAction.mCanceled) return;
-            mCacheManager.setDiskCache(key, croppedBitmap);
+            mCacheManager.setDiskCache(key, cropResult.getBitmap());
 
             DrawableResponse response =
                     new DrawableResponse(
-                            croppedBitmap,
-                            request.getRegion(),
+                            cropResult.getBitmap(),
+                            cropResult.getRegion(),
                             SystemClock.uptimeMillis() - mAction.mStartTime);
 
             onFinished(mAction, response);

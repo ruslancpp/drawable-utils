@@ -12,13 +12,12 @@ android {
         targetSdkVersion 25
         versionCode 1
         versionName "0.1"
+
+        renderscriptTargetApi = 18
+        renderscriptSupportModeEnabled true
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
+
+    sourceSets { main { renderscript.srcDirs = ['src/main/rs', 'src/main/rs/'] } }
 }
 
 dependencies {
@@ -26,7 +25,7 @@ dependencies {
     compile "com.android.support:appcompat-v7:$libSupport"
     compile "com.android.support:support-annotations:$libSupport"
 
-    // Utils
+    // Util
     compile 'com.jakewharton:disklrucache:2.0.2'
 
     // Testing

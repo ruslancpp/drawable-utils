@@ -109,6 +109,10 @@ final public class RegionDrawable extends Drawable implements DrawableHandlerCal
     }
 
     private void updateDirtyBounds() {
+        if (mRegion == null) {
+            mDirtyBounds.set(getBounds());
+            return;
+        }
         getCroppedBounds(getBounds().width(), getBounds().height(), mRegion, mDirtyBounds);
         mDirtyBounds.offset(getBounds().left, getBounds().top);
     }
